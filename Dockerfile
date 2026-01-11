@@ -132,22 +132,53 @@ set -e
 
 echo "Starting Symfony application..."
 
-# Attendre que la base de données soit prête
+# Afficher l'info de connexion DB (sans le mot de passe)
+if [ -n "$DATABASE_URL" ]; then
+    echo "DATABASE_URL is set: $(echo $DATABASE_URL | sed 's/:\/\/[^:]*:[^@]*@/:\/\/***:***@/')"
+else
+    echo "WARNING: DATABASE_URL is not set!"
+fi
+
+# Délai initial pour laisser le temps à la base de données de démarrer
+echo "Waiting 5 seconds before attempting database connection..."
+sleep 5
+
+# Attendre que la base de données soit prête (avec timeout de 60 secondes)
+echo "Checking database connection..."
+MAX_TRIES=30
+COUNTER=0
+
 until php bin/console dbal:run-sql "SELECT 1" > /dev/null 2>&1; do
-    echo "Waiting for database..."
+    COUNTER=$((COUNTER + 1))
+    if [ $COUNTER -gt $MAX_TRIES ]; then
+        echo "ERROR: Database connection timeout after $MAX_TRIES attempts (60 seconds)"
+        echo "Please check:"
+        echo "  1. Database service is running on Render.com"
+        echo "  2. DATABASE_URL environment variable is correctly set"
+        echo "  3. Database is accessible from this container"
+
+        # Essayer de voir l'erreur exacte
+        echo "Attempting connection to see the error:"
+        php bin/console dbal:run-sql "SELECT 1" || true
+        exit 1
+    fi
+    echo "Waiting for database... (attempt $COUNTER/$MAX_TRIES)"
     sleep 2
 done
 
 echo "Database is ready!"
 
 # Exécuter les migrations
+echo "Running database migrations..."
 php bin/console doctrine:migrations:migrate --no-interaction --allow-no-migration || true
 
 # Vider le cache
+echo "Clearing and warming up cache..."
 php bin/console cache:clear --no-warmup
 php bin/console cache:warmup
 
 # Installer les assets
+echo "Installing assets..."
 php bin/console assets:install --no-interaction
 php bin/console importmap:install
 
@@ -155,6 +186,7 @@ php bin/console importmap:install
 mkdir -p var/cache var/log
 chmod -R 777 var
 
+echo "Application is ready to start!"
 exec "$@"
 EOF
 

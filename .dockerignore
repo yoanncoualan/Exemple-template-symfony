@@ -1,0 +1,44 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Docker
+Dockerfile
+docker-compose.yml
+compose.yaml
+compose.override.yaml
+.dockerignore
+
+# Vendor (sera installé dans le Dockerfile)
+/vendor/
+
+# Cache et logs
+/var/
+!/var/share
+
+# Tests
+/tests/
+phpunit.dist.xml
+
+# Documentation
+*.md
+README.md
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Environnement
+.env.local
+.env.*.local
+
+# Node modules (si présents)
+node_modules/
+
+# Autres
+.DS_Store
+Thumbs.db
